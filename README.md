@@ -1,46 +1,94 @@
-# Getting Started with Create React App
+📘 AI-Assisted Knowledge Quiz
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+An interactive quiz generator powered by Google Gemini AI.
+Users enter a topic → AI generates MCQs → user takes quiz → AI gives personalized feedback.
 
-## Available Scripts
 
-In the project directory, you can run:
 
-### `npm start`
+1. Project Setup & Demo
+Run the project locally
+npm install
+npm start
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Environment Variables
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+Create a .env file in the project root:
 
-### `npm test`
+REACT_APP_GEMINI_KEY=your_api_key_here
+REACT_APP_GEMINI_MODEL=gemini-1.5-flash
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-### `npm run build`
+Note: You must restart the development server after editing .env.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+Demo
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
 
-### `npm run eject`
+🧠 2. Problem Understanding
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+The requirement is to build an AI-assisted quiz with 4 screens:
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Topic selection
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+AI-generated MCQs (exactly 5 questions)
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+Interactive quiz UI with progress and navigation
 
-## Learn More
+Result screen with AI-generated feedback
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+Key goals:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+AI must return consistent JSON
+
+App must detect malformed JSON and retry automatically
+
+Quiz UI should be clean, modern, and responsive
+
+Use organized component-based architecture
+
+Assumptions:
+
+Gemini API returns valid results within max 3 retries
+
+MCQs contain 3–4 options
+
+Score-based feedback should be encouraging and helpful
+
+
+3. AI Prompts & Iterations
+MCQ Generation Prompt
+
+The model is instructed strictly:
+
+{
+  "questions": [
+    { "q": "Question?", "options": ["A","B","C","D"], "answer": 0 }
+  ]
+}
+
+
+Rules enforced:
+
+Must generate exactly 5 MCQs
+
+“answer” must be the 0-based index
+
+No explanation, no extra text
+
+If JSON invalid → retry up to 3 times
+
+Feedback Prompt
+
+AI receives:
+
+Topic
+
+Score percentile
+
+Returns:
+
+1–2 sentence encouragement
+
+2 improvement suggestions
+
+Plain text only
