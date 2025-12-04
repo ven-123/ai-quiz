@@ -1,17 +1,15 @@
 // src/aiService.ts
 import { MCQ } from "./types";
 
-type AIResponse = {
-  questions: MCQ[];
-};
-
-// 👇 Replace this with your actual Vercel URL
 const VERCEL_BASE =
   process.env.NODE_ENV === "development"
-    ? "https://YOUR-PROJECT-NAME.vercel.app"
-    : ""; // in production, relative `/api/...` works
+    ? "http://localhost:3000"        // Local dev
+    : "";                            // Production → relative path "/api/..."
 
-// Call Vercel serverless: /api/generate-mcqs
+type AIResponse = { questions: MCQ[] };
+
+
+// ------------------ CALL BACKEND: /api/generate-mcqs ------------------
 export async function generateMCQs(topic: string): Promise<AIResponse> {
   const res = await fetch(`${VERCEL_BASE}/api/generate-mcqs`, {
     method: "POST",
@@ -19,42 +17,33 @@ export async function generateMCQs(topic: string): Promise<AIResponse> {
     body: JSON.stringify({ topic }),
   });
 
+  const text = await res.text();
+
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`Backend error ${res.status}: ${text}`);
   }
 
-  const data = await res.json();
-
-  if (!Array.isArray(data.questions) || data.questions.length !== 5) {
-    throw new Error("Malformed questions received from backend.");
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    throw new Error("Invalid JSON from backend: " + text);
   }
-
-  return data as AIResponse;
 }
 
-// Call Vercel serverless: /api/feedback
-export async function generateFeedback(
-  topic: string,
-  scorePercent: number
-): Promise<string> {
-  const res = await fetch(`${VERCEL_BASE}/api/feedback`, {
+
+// ------------------ CALL BACKEND: /api/generate-feedback ------------------
+export async function generateFeedback(topic: string, score: number): Promise<string> {
+  const res = await fetch(`${VERCEL_BASE}/api/generate-feedback`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic, score: scorePercent }),
+    body: JSON.stringify({ topic, score }),
   });
 
+  const text = await res.text();
+
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(`Backend error ${res.status}: ${text}`);
   }
 
-  const data = await res.json();
-  const feedback = (data.feedback as string) || "";
-
-  if (!feedback.trim()) {
-    throw new Error("Empty feedback returned from backend.");
-  }
-
-  return feedback.trim();
+  return text;
 }

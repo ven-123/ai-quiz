@@ -1,21 +1,24 @@
 // api/feedback.js
-import { GoogleGenerativeAI } from "@google/generative-ai";
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const apiKey = process.env.GEMINI_API_KEY;
 const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
-export default async function handler(req, res) {
+module.exports = async (req, res) => {
   if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+    res.status(405).json({ error: "Method not allowed" });
+    return;
   }
 
   if (!apiKey) {
-    return res.status(500).json({ error: "GEMINI_API_KEY not set in environment" });
+    res.status(500).json({ error: "GEMINI_API_KEY not set in environment" });
+    return;
   }
 
   const { topic, score } = req.body || {};
-  if (topic == null || score == null) {
-    return res.status(400).json({ error: "Missing topic or score" });
+  if (!topic || typeof score !== "number") {
+    res.status(400).json({ error: "Missing topic or score" });
+    return;
   }
 
   try {
@@ -33,8 +36,8 @@ Return plain text only.
     const result = await model.generateContent(prompt);
     const text = result.response.text()?.trim() || "No feedback available.";
 
-    return res.status(200).json({ feedback: text });
+    res.status(200).json({ feedback: text });
   } catch (err) {
-    return res.status(500).json({ error: String(err) });
+    res.status(500).json({ error: String(err) });
   }
-}
+};
