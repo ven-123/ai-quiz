@@ -1,200 +1,176 @@
-## AI-Assisted Knowledge Quiz
+# AI-Assisted Knowledge Quiz
 
-An interactive web application that generates quizzes using AI. Users enter any topic, receive AI-generated multiple-choice questions, attempt the quiz, and get personalized feedback based on their performance.
+## 1. Project Setup & Demo
 
+### Web
+To run the project locally:
 
-## Project Setup and Demo
-
-### Running the Application Locally
+```bash
 npm install
 npm start
+```
 
-### Environment Variables
+Access the application at:
+`http://localhost:3000`
 
-Create a .env file in the project root:
+### Mobile (If Required)
+(Not applicable for this project, but included as per template.)
 
-REACT_APP_GEMINI_KEY=your_api_key_here
-REACT_APP_GEMINI_MODEL=gemini-1.5-flash
+- **iOS:** Open in Xcode → Run on simulator/device  
+- **Android:** Run `./gradlew assembleDebug` or launch from Android Studio  
 
+### Demo
+Attach either:
 
-Restart the server after modifying .env.
+- A **screen recording** demonstrating all four screens, or  
+- A **hosted link** (Vercel/Netlify)  
 
-Demo (Optional)
+---
 
-Provide screen recording or hosted link demonstrating all four screens:
+## 2. Problem Understanding
 
-Topic selection
+The goal is to build an **AI-powered quiz generator** that accepts any user-provided topic and returns a structured, navigable 4-step quiz experience.
 
-Quiz generation
+### Key Requirements
+- User enters a topic  
+- AI generates **exactly 5 MCQs** with:
+  - question text  
+  - 3–4 options  
+  - correct answer index (0-based)  
+- Quiz is displayed one question at a time  
+- Track user selections + score  
+- Final screen displays AI-generated personalized feedback  
+- Must handle malformed JSON and retry  
 
-Quiz interface
+### Assumptions
+- AI may return inconsistent JSON → validation needed  
+- UI should be clean, modern, and responsive  
 
-Score + AI feedback
+---
 
+## 3. AI Prompts & Iterations
 
-## Problem Understanding
-
-The goal is to build an AI-assisted quiz generator that:
-
-Accepts any topic from the user
-
-Generates exactly 5 multiple-choice questions using AI
-
-Ensures the AI produces valid structured JSON
-
-Displays questions sequentially with navigation
-
-Tracks user progress and selected answers
-
-Computes the final score
-
-Generates personalized feedback using AI
-
-### Key Constraints & Assumptions
-
-AI may occasionally return malformed JSON → must retry
-
-Options must contain 3–4 choices
-
-Answer index must be 0-based
-
-Feedback should be concise, helpful, and friendly
-
-
-## AI Prompts
 ### MCQ Generation Prompt
+The application sends a structured prompt:
 
-The AI is instructed to return strictly formatted JSON:
+- Output must be **strict JSON**  
+- 5 questions  
+- Options array with 3–4 values  
+- `answer` must be a number (0-based)  
+- No additional explanation text  
 
-{
-  "questions": [
-    { "q": "Question?", "options": ["A","B","C","D"], "answer": 0 }
-  ]
-}
+### Retry Handling
+If parsing fails:
 
-
-Rules enforced:
-
-Return only JSON
-
-Exactly 5 questions
-
-Options: 3–4 items
-
-answer: number (0-based)
-
-No extra explanation
-
-### Retry Logic
-
-If the model returns malformed or partial JSON:
-
-Attempt parsing
-
-If parsing fails, retry up to 3 times
-
-After maximum retries, show a user-facing error
+1. Attempt to parse and sanitize  
+2. Retry API call  
+3. After 3 failed attempts → show error (`Failed to Generate`)  
 
 ### Feedback Prompt
-
 Given:
+- Topic  
+- Score percentage  
 
-Topic
+AI returns:
+- Short performance summary  
+- Two improvement suggestions  
 
-Score percentage
+### Iterations
+- Adjusted prompts for reliable JSON formatting  
+- Added aggressive cleanup for malformed responses  
+- Enforced strict structure to maintain consistency  
 
-The AI returns:
+---
 
-1–2 sentence constructive feedback
+## 4. Architecture & Code Structure
 
-Two improvement suggestions
+### Navigation Flow
 
-## Architecture
-### Component Flow
+```
 TopicChoose → GenerateScreen → QuizScreen → ResultScreen
+```
 
-### Code Structure
+### Component Responsibilities
+
+- **TopicChoose**  
+  Accept topic input from user.
+
+- **GenerateScreen**  
+  Trigger AI quiz generation, show loading state, handle retries.
+
+- **QuizScreen**  
+  Display MCQs one-by-one, handle user selections, maintain progress bar.
+
+- **ResultScreen**  
+  Compute score and generate personalized feedback via AI.
+
+### AI Service (`aiService.ts`)
+Handles:
+- Prompt construction  
+- Gemini API calls  
+- JSON parsing  
+- Retry logic  
+- Returning sanitized quiz objects  
+
+### Folder Structure
+```
 src/
   components/
     TopicChoose.tsx
     GenerateScreen.tsx
     QuizScreen.tsx
     ResultScreen.tsx
+
   aiService.ts
   App.tsx
   App.css
 
-### Responsibilities
+public/
+  screenshots/
+```
 
-TopicChoose: gather user input
+### State Management
+- React `useState` for local UI state  
+- Props for data flow between components  
 
-GenerateScreen: trigger AI request + handle retry logic
+---
 
-QuizScreen: display questions, navigation, progress bar
+## Screenshots
 
-ResultScreen: show score + AI feedback
-
-aiService: manages Gemini requests & JSON validation
-
-### Styling
-
-Fully custom CSS
-
-Modern gradient UI
-
-Responsive layout
-
-Reusable components (.btn, .card, .option, .progress)
-
-## Demo
-
-### Topic Selection
+### 1. Topic Selection
 ![Topic Selection](public/screenshots/screen_1.png)
 
-### Quiz Generation (AI Loading)
+### 2. Quiz Generation (AI Loading)
 ![Quiz Loading](public/screenshots/screen_2.png)
 
-### Quiz Interface
+### 3. Quiz Interface
 ![Quiz Interface](public/screenshots/screen_3.png)
 
-### Result & AI Feedback
+### 4. Result & AI Feedback
 ![Result Screen](public/screenshots/screen_4.png)
 
 
-## Known Issues / Improvements
-### Potential Enhancements
+## 6. Known Issues / Improvements
 
-Add correct/incorrect indicators after answering
+### Known Issues
+- AI may sometimes produce subtle JSON format issues  
+- No detailed explanations for correct answers  
+- Limited navigation (linear experience)
 
-Add quiz explanation mode
+### Improvements
+- Add answer explanations  
+- Add difficulty selection  
+- Add countdown timer  
+- Save quiz history using localStorage  
+- Add animations for transitions  
+- Add JSON schema validation  
 
-Add option to select difficulty level
+---
 
-Add timer modes
+## 7. Bonus Work
 
-Add animations between question transitions
-
-Persist quiz history using localStorage
-
-### Technical Improvements
-
-Add schema validation for AI output
-
-Implement debounce for topic input
-
-Convert AI service to use AbortControllers for cancellation
-
-
-## Bonus Work
-
-Robust retry mechanism for malformed AI responses
-
-Modern design system with reusable utility classes
-
-Gradient score indicator and improved UI polish
-
-Mobile-optimized responsive UI
-
-Clear separation of screens and service logic
-
-Enhanced visual feedback on option selection
+- Implemented **robust retry mechanism** for malformed AI JSON  
+- Modern gradient UI with responsive layout  
+- Added progress tracking and intuitive navigation  
+- Clean separation of UI, logic, and AI services  
+- Personalized AI feedback system  
