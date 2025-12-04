@@ -1,49 +1,75 @@
 // src/aiService.ts
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { MCQ } from "./types";
 
-const VERCEL_BASE =
-  process.env.NODE_ENV === "development"
-    ? "http://localhost:3000"        // Local dev
-    : "";                            // Production → relative path "/api/..."
+// Load env vars
+const API_KEY = process.env.REACT_APP_GEMINI_KEY!;
+const MODEL = process.env.REACT_APP_GEMINI_MODEL || "gemini-2.5-flash";
 
-type AIResponse = { questions: MCQ[] };
-
-
-// ------------------ CALL BACKEND: /api/generate-mcqs ------------------
-export async function generateMCQs(topic: string): Promise<AIResponse> {
-  const res = await fetch(`${VERCEL_BASE}/api/generate-mcqs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic }),
-  });
-
-  const text = await res.text();
-
-  if (!res.ok) {
-    throw new Error(`Backend error ${res.status}: ${text}`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    throw new Error("Invalid JSON from backend: " + text);
-  }
+if (!API_KEY) {
+  throw new Error("Missing REACT_APP_GEMINI_KEY in .env");
 }
 
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: MODEL });
 
-// ------------------ CALL BACKEND: /api/generate-feedback ------------------
-export async function generateFeedback(topic: string, score: number): Promise<string> {
-  const res = await fetch(`${VERCEL_BASE}/api/generate-feedback`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ topic, score }),
-  });
+function extractJson(text: string) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("No JSON found in response:\n" + text);
+  return JSON.parse(match[0]);
+}
 
-  const text = await res.text();
+// ------------------ Generate MCQs --------------------
+export async function generateMCQs(topic: string): Promise<{ questions: MCQ[] }> {
+  const prompt = `
+Return ONLY valid JSON:
+{
+  "questions": [
+    { "q": "Question?", "options": ["A","B","C","D"], "answer": 0 }
+  ]
+}
 
-  if (!res.ok) {
-    throw new Error(`Backend error ${res.status}: ${text}`);
+Generate EXACTLY 5 MCQs about "${topic}".
+Rules:
+- "options" must be 3–4 strings
+- "answer" must be 0-based index
+- strictly no extra text
+  `;
+
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text();
+
+      const parsed = extractJson(text);
+
+      if (parsed.questions?.length !== 5) {
+        throw new Error("Did not receive 5 questions");
+      }
+
+      return parsed;
+    } catch (err) {
+      if (attempt === maxAttempts) throw err;
+      await new Promise((r) => setTimeout(r, 300));
+    }
   }
 
-  return text;
+  throw new Error("Unexpected error");
+}
+
+// ------------------ Generate Feedback --------------------
+export async function generateFeedback(topic: string, scorePercent: number): Promise<string> {
+  const prompt = `
+Topic: ${topic}
+Score: ${scorePercent}%
+
+Give short friendly feedback (1–2 sentences) and 2 areas to revise.
+Return plain text.
+  `;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  return text.trim();
 }
